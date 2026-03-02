@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python main.py)",
+      "Bash(python -m pytest *)",
+      "Bash(pip install *)",
+      "Bash(pip freeze)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(source venv/bin/activate *)",
+      "Bash(python -c *)",
+      "Bash(pylint *)",
+      "Bash(flake8 *)",
+      "Bash(mypy *)"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)"
+    ]
+  }
+}
