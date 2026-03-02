@@ -1,230 +1,74 @@
-# CLAUDE.md — RadioScope
+# RadioScope
 
-This file provides guidance to Claude and other AI coding assistants working in this repository.
+## About
+Python/PyQt6 desktop internet radio player for Linux. Aggregates human-curated stations from multiple open directories (radio-browser.info, SomaFM) and uses Claude AI as an intelligent station navigator — not an algorithmic playlist builder, but a knowledgeable guide to real radio.
 
----
+## Tech Stack
+- **Language:** Python 3.10+
+- **GUI:** PyQt6
+- **Audio:** python-vlc (requires system VLC: `sudo apt install vlc`)
+- **Async HTTP:** aiohttp
+- **Database:** SQLite (via stdlib sqlite3)
+- **AI:** Anthropic Python SDK (optional, for AI tuner)
+- **Config:** python-dotenv for .env loading
+- **OS Target:** Linux Mint (primary), Ubuntu-compatible
 
-## Project Overview
-
-**RadioScope** is a radio analysis application. This repository is in its initial state — no source code has been committed yet. As the codebase grows, this file should be updated to reflect the actual structure, stack, and conventions in use.
-
----
-
-## Repository State
-
-- **Status**: Freshly initialized — no source files committed yet.
-- **Primary branch**: `main` (or as established by the first commit)
-- **Remote**: `FredrickBismark/RadioScope`
-
----
-
-## Development Branch Conventions
-
-- Feature branches follow the pattern: `feature/<short-description>`
-- AI-assisted branches follow: `claude/<task-slug>`
-- Bug-fix branches: `fix/<issue-description>`
-- Never commit directly to `main` without a pull request review.
-- Always push to the branch specified at the top of the session task.
-
----
-
-## Git Workflow
-
-```bash
-# Start work on a new feature
-git checkout -b feature/my-feature
-
-# Stage and commit with a descriptive message
-git add <specific-files>
-git commit -m "feat: describe what this commit does"
-
-# Push to remote
-git push -u origin feature/my-feature
+## Project Structure
+```
+radioscope/
+├── main.py              # Entry point
+├── requirements.txt     # Python dependencies
+├── .env                 # API keys (gitignored)
+├── core/
+│   ├── config.py        # Constants, paths, API URLs, mood presets
+│   ├── player.py        # VLC stream player + ICY metadata extraction
+│   ├── stations.py      # Multi-source station aggregator (modular sources)
+│   ├── database.py      # SQLite persistence (favorites, liked songs, history)
+│   └── ai_tuner.py      # Anthropic API integration for station recommendations
+├── ui/
+│   ├── main_window.py   # Main app window, navigation, signal wiring
+│   ├── station_list.py  # Scrollable station card list widget
+│   ├── player_bar.py    # Now-playing bar with controls
+│   ├── ai_panel.py      # AI natural language station finder
+│   └── theme.py         # Dark theme stylesheet and color palette
+├── data/
+│   └── radioscope.db    # SQLite database (auto-created, gitignored)
+└── assets/              # Icons, images (future)
 ```
 
-### Commit Message Format
+## Commands
+- **Run app:** `python main.py` (from project root, with venv active)
+- **Install deps:** `pip install -r requirements.txt`
+- **Activate venv:** `source venv/bin/activate`
+- **Create venv:** `python3 -m venv venv`
 
-Use [Conventional Commits](https://www.conventionalcommits.org/):
+## Architecture Decisions
+- **Station sources are modular.** Each source subclasses `StationSource` in `core/stations.py` with `search()` and `top_stations()` methods. `StationAggregator` combines all sources, deduplicates by URL, and sorts by popularity.
+- **Player uses VLC via python-vlc.** This handles the widest range of stream codecs and formats. ICY metadata is polled every 3 seconds via VLC's media meta API.
+- **AI is a translator, not an algorithm.** `ai_tuner.py` takes natural language, returns search terms and SomaFM channel IDs. The aggregator executes the actual searches. The AI never touches the audio pipeline.
+- **All persistence goes through `Database` class.** No raw SQL elsewhere. Tables: favorites, liked_songs, play_history, station_cache.
+- **Qt signals bridge async to sync.** Station fetching and AI calls run in QThread workers. Results emit signals consumed by the main thread.
 
-| Prefix     | Use for                                      |
-|------------|----------------------------------------------|
-| `feat:`    | New feature                                  |
-| `fix:`     | Bug fix                                      |
-| `docs:`    | Documentation only changes                   |
-| `refactor:`| Code change that neither fixes a bug nor adds a feature |
-| `test:`    | Adding or updating tests                     |
-| `chore:`   | Build process, dependency updates, tooling   |
-| `perf:`    | Performance improvements                     |
+## Code Style
+- Type hints on function signatures
+- Docstrings on classes and public methods
+- No wildcard imports
+- f-strings for formatting
+- dataclasses for data containers (see `Station`, `NowPlaying`)
+- PyQt6 signals/slots pattern for UI updates
+- snake_case for functions/variables, PascalCase for classes
 
-Examples:
-```
-feat: add frequency spectrum waterfall display
-fix: correct FFT window size calculation
-docs: update CLAUDE.md with build instructions
-test: add unit tests for signal parser
-```
+## Known Limitations & TODOs
+- SomaFM source returns .pls playlist URLs — VLC handles these but a proper PLS parser would be more robust
+- No song fingerprinting yet (planned: Chromaprint/AcoustID integration)
+- No download capability for liked songs yet (planned: yt-dlp matching)
+- Metadata extraction depends on ICY tags in the stream — not all stations provide them
+- No Icecast/xiph.org directory source yet
+- Station cache TTL is 6 hours, not configurable from UI
+- No system tray integration yet
 
----
-
-## Project Structure (To Be Established)
-
-Once source code is added, update this section with the actual layout. Expected structure:
-
-```
-RadioScope/
-├── CLAUDE.md               # This file
-├── README.md               # User-facing documentation
-├── .gitignore              # Git ignore rules
-├── package.json            # (if Node.js / JS project)
-├── src/                    # Source code
-│   ├── main.*              # Application entry point
-│   ├── components/         # UI components (if applicable)
-│   ├── services/           # Business logic / data services
-│   └── utils/              # Shared utility functions
-├── tests/                  # Test files
-│   ├── unit/
-│   └── integration/
-├── docs/                   # Extended documentation
-└── scripts/                # Build, deploy, utility scripts
-```
-
-> **Update this section** once the actual directory layout is decided and implemented.
-
----
-
-## Technology Stack
-
-> **To be filled in** once the stack is chosen. Common options for radio/signal analysis applications:
-
-| Layer         | Likely Options                          |
-|---------------|-----------------------------------------|
-| Language      | Python, TypeScript/JavaScript, Rust, C++ |
-| UI Framework  | React, Vue, Svelte, Qt, wxWidgets       |
-| Signal Proc.  | NumPy/SciPy, WebAssembly, FFTW          |
-| SDR Backend   | GNU Radio, librtlsdr, SoapySDR          |
-| Testing       | pytest, Jest, Vitest, cargo test        |
-| Build Tool    | vite, webpack, CMake, cargo             |
-
----
-
-## Development Setup
-
-> **To be filled in** once the project is initialized. This section should eventually include:
-
-```bash
-# Install dependencies
-<package-manager> install
-
-# Run in development mode
-<package-manager> run dev
-
-# Run tests
-<package-manager> run test
-
-# Build for production
-<package-manager> run build
-```
-
-### Prerequisites
-
-Document here:
-- Required runtime versions (Node.js >=X, Python >=X, Rust stable, etc.)
-- System-level dependencies (librtlsdr, portaudio, etc.)
-- Environment variables or `.env` setup
-
----
-
-## Testing Conventions
-
-- **All new features must include tests.**
-- Tests live alongside source files or in a dedicated `tests/` directory.
-- Follow the Arrange-Act-Assert (AAA) pattern.
-- Test file naming: `<module>.test.<ext>` or `test_<module>.<ext>`.
-- Aim for unit tests on pure logic and integration tests for I/O-heavy code.
-
-### Running Tests
-
-```bash
-# Update with actual commands once the stack is set
-<test-command>
-```
-
----
-
-## Code Conventions
-
-### General
-
-- Keep functions small and focused on a single responsibility.
-- Prefer explicit over implicit — no magic numbers or unexplained constants.
-- Document non-obvious logic with inline comments; avoid obvious comments.
-- Delete dead code rather than commenting it out.
-- Avoid over-engineering: build the minimum needed for the current task.
-
-### Naming
-
-| Construct       | Convention (adjust for language)          |
-|-----------------|-------------------------------------------|
-| Variables       | `camelCase` (JS/TS) / `snake_case` (Py)  |
-| Functions       | `camelCase` / `snake_case`                |
-| Classes         | `PascalCase`                              |
-| Constants       | `UPPER_SNAKE_CASE`                        |
-| Files/modules   | `kebab-case` (JS/TS) / `snake_case` (Py) |
-
-### Imports
-
-- Group imports: standard library → third-party → internal.
-- Avoid circular dependencies.
-- Use absolute imports over relative when the project structure supports it.
-
-### Error Handling
-
-- Handle errors at the boundary (user input, external APIs, hardware I/O).
-- Do not swallow exceptions silently — log or surface them.
-- Avoid adding error handling for scenarios that cannot happen in practice.
-
----
-
-## AI Assistant Instructions
-
-When working in this repository, Claude and other AI assistants should:
-
-1. **Read before writing** — Always read a file before editing it. Understand existing code before proposing changes.
-2. **Stay focused** — Only make changes directly requested or clearly necessary. Do not refactor unrelated code.
-3. **No unnecessary files** — Do not create files unless required. Prefer editing existing files.
-4. **No over-engineering** — Three similar lines of code is better than a premature abstraction.
-5. **Security first** — Never introduce command injection, XSS, SQL injection, or other OWASP Top 10 vulnerabilities.
-6. **Commit atomically** — One logical change per commit; use descriptive conventional commit messages.
-7. **Branch discipline** — Always develop on the specified branch. Never push to `main` directly.
-8. **Test your work** — Run existing tests after changes; add tests for new logic.
-9. **Update this file** — If you establish new patterns, add dependencies, or restructure the project, update CLAUDE.md to reflect the new state.
-10. **Ask when unclear** — If requirements are ambiguous, prefer asking over guessing.
-
-### What NOT to Do
-
-- Do not add docstrings or comments to code you did not change.
-- Do not add fallback or validation for impossible scenarios.
-- Do not create helpers for one-off operations.
-- Do not use feature flags or backwards-compatibility shims when direct change is appropriate.
-- Do not push to a branch other than the one specified for the task.
-
----
-
-## Sensitive Information
-
-- Do not commit `.env` files, API keys, hardware credentials, or personal data.
-- Add secrets management instructions here once established (e.g., `.env.example` with placeholder values).
-
----
-
-## Updating This File
-
-This document should be treated as a living specification. Update it when:
-
-- The technology stack is finalized.
-- A new major directory or module is added.
-- A new workflow or convention is established.
-- Tooling (CI, linting, formatting) is configured.
-- Prerequisites or setup steps change.
-
-Keep it accurate — an outdated CLAUDE.md is worse than none.
+## Important Notes
+- API key is optional — the app works fully without AI features. Set `ANTHROPIC_API_KEY` in `.env` to enable the AI tuner.
+- VLC must be installed system-wide (`sudo apt install vlc`). python-vlc is just bindings.
+- The `data/` directory is auto-created. `radioscope.db` should not be committed.
+- All UI styling is in `ui/theme.py` via a single Qt stylesheet string. Colors are in the `COLORS` dict.
